@@ -5,17 +5,31 @@
                 v-for="(beat, index) in shortBeatList"
                 :key="index"
                 class="beat"
-                :class="{ 'empty': (beat === 0), 'down': (beat.status === 0), 'pending': (beat.status === 2), 'maintenance': (beat.status === 3) }"
+                :class="{
+                    empty: beat === 0,
+                    down: beat.status === 0,
+                    pending: beat.status === 2,
+                    maintenance: beat.status === 3,
+                }"
                 :style="beatStyle"
                 :title="getBeatTitle(beat)"
             />
         </div>
         <div
-            v-if="!$root.isMobile && size !== 'small' && beatList.length > 4 && $root.styleElapsedTime !== 'none'"
-            class="d-flex justify-content-between align-items-center word" :style="timeStyle"
+            v-if="
+                !$root.isMobile &&
+                size !== 'small' &&
+                beatList.length > 4 &&
+                $root.styleElapsedTime !== 'none'
+            "
+            class="d-flex justify-content-between align-items-center word"
+            :style="timeStyle"
         >
             <div>{{ timeSinceFirstBeat }} ago</div>
-            <div v-if="$root.styleElapsedTime === 'with-line'" class="connecting-line"></div>
+            <div
+                v-if="$root.styleElapsedTime === 'with-line'"
+                class="connecting-line"
+            ></div>
             <div>{{ timeSinceLastBeat }}</div>
         </div>
     </div>
@@ -40,7 +54,7 @@ export default {
         heartbeatList: {
             type: Array,
             default: null,
-        }
+        },
     },
     data() {
         return {
@@ -53,9 +67,9 @@ export default {
         };
     },
     computed: {
-
         /**
          * If heartbeatList is null, get it from $root.heartbeatList
+         * @returns {object} Heartbeat list
          */
         beatList() {
             if (this.heartbeatList === null) {
@@ -67,8 +81,7 @@ export default {
 
         /**
          * Calculates the amount of beats of padding needed to fill the length of shortBeatList.
-         *
-         * @return {number} The amount of beats of padding needed to fill the length of shortBeatList.
+         * @returns {number} The amount of beats of padding needed to fill the length of shortBeatList.
          */
         numPadding() {
             if (!this.beatList) {
@@ -112,8 +125,10 @@ export default {
         },
 
         wrapStyle() {
-            let topBottom = (((this.beatHeight * this.hoverScale) - this.beatHeight) / 2);
-            let leftRight = (((this.beatWidth * this.hoverScale) - this.beatWidth) / 2);
+            let topBottom =
+                (this.beatHeight * this.hoverScale - this.beatHeight) / 2;
+            let leftRight =
+                (this.beatWidth * this.hoverScale - this.beatWidth) / 2;
 
             return {
                 padding: `${topBottom}px ${leftRight}px`,
@@ -129,12 +144,10 @@ export default {
                     transition: "all ease-in-out 0.25s",
                     transform: `translateX(${width}px)`,
                 };
-
             }
             return {
                 transform: "translateX(0)",
             };
-
         },
 
         beatStyle() {
@@ -148,51 +161,68 @@ export default {
 
         /**
          * Returns the style object for positioning the time element.
-         * @return {Object} The style object containing the CSS properties for positioning the time element.
+         * @returns {object} The style object containing the CSS properties for positioning the time element.
          */
         timeStyle() {
             return {
-                "margin-left": this.numPadding * (this.beatWidth + this.beatMargin * 2) + "px",
+                "margin-left":
+                    this.numPadding * (this.beatWidth + this.beatMargin * 2) +
+                    "px",
             };
         },
 
         /**
          * Calculates the time elapsed since the first valid beat.
-         *
-         * @return {string} The time elapsed in minutes or hours.
+         * @returns {string} The time elapsed in minutes or hours.
          */
         timeSinceFirstBeat() {
-            const firstValidBeat = this.shortBeatList.at(this.numPadding);
-            const minutes = dayjs().diff(dayjs.utc(firstValidBeat?.time), "minutes");
-            if (minutes > 60) {
-                return (minutes / 60).toFixed(0) + "h";
-            } else {
-                return minutes + "m";
-            }
+            try {
+                if (this.shortBeatList && this.shortBeatList.length) {
+                    const firstValidBeat = this.shortBeatList[this.numPadding];
+                    const minutes = dayjs().diff(
+                        dayjs.utc(firstValidBeat?.time),
+                        "minutes"
+                    );
+                    if (minutes > 60) {
+                        return (minutes / 60).toFixed(0) + "h";
+                    } else {
+                        return minutes + "m";
+                    }
+                }
+            } catch (error) {}
+            return "";
         },
 
         /**
          * Calculates the elapsed time since the last valid beat was registered.
-         *
-         * @return {string} The elapsed time in a minutes, hours or "now".
+         * @returns {string} The elapsed time in a minutes, hours or "now".
          */
         timeSinceLastBeat() {
-            const lastValidBeat = this.shortBeatList.at(-1);
-            const seconds = dayjs().diff(dayjs.utc(lastValidBeat?.time), "seconds");
+            try {
+                if (this.shortBeatList && this.shortBeatList.length) {
+                    const lastValidBeat = this.shortBeatList[this.shortBeatList.length - 1];
+                    const seconds = dayjs().diff(
+                        dayjs.utc(lastValidBeat?.time),
+                        "seconds"
+                    );
 
-            let tolerance = 60 * 2; // default for when monitorList not available
-            if (this.$root.monitorList[this.monitorId] != null) {
-                tolerance = this.$root.monitorList[this.monitorId].interval * 2;
-            }
+                    let tolerance = 60 * 2; // default for when monitorList not available
+                    if (this.$root.monitorList[this.monitorId] != null) {
+                        tolerance =
+                            this.$root.monitorList[this.monitorId].interval * 2;
+                    }
 
-            if (seconds < tolerance) {
-                return "now";
-            } else if (seconds < 60 * 60) {
-                return (seconds / 60).toFixed(0) + "m ago";
-            } else {
-                return (seconds / 60 / 60).toFixed(0) + "h ago";
-            }
-        }
+                    if (seconds < tolerance) {
+                        return "now";
+                    } else if (seconds < 60 * 60) {
+                        return (seconds / 60).toFixed(0) + "m ago";
+                    } else {
+                        return (seconds / 60 / 60).toFixed(0) + "h ago";
+                    }
+                }
+            } catch (error) {}
+            return "";
+        },
     },
     watch: {
         beatList: {
@@ -234,30 +264,39 @@ export default {
         }
 
         if (!Number.isInteger(actualMargin)) {
-            this.beatMargin = Math.round(actualMargin) / window.devicePixelRatio;
+            this.beatMargin =
+                Math.round(actualMargin) / window.devicePixelRatio;
         }
 
         window.addEventListener("resize", this.resize);
         this.resize();
     },
     methods: {
-        /** Resize the heartbeat bar */
+        /**
+         * Resize the heartbeat bar
+         * @returns {void}
+         */
         resize() {
             if (this.$refs.wrap) {
-                this.maxBeat = Math.floor(this.$refs.wrap.clientWidth / (this.beatWidth + this.beatMargin * 2));
+                this.maxBeat = Math.floor(
+                    this.$refs.wrap.clientWidth /
+                        (this.beatWidth + this.beatMargin * 2)
+                );
             }
         },
 
         /**
          * Get the title of the beat.
          * Used as the hover tooltip on the heartbeat bar.
-         * @param {Object} beat Beat to get title from
-         * @returns {string}
+         * @param {object} beat Beat to get title from
+         * @returns {string} Beat title
          */
         getBeatTitle(beat) {
-            return `${this.$root.datetime(beat.time)}` + ((beat.msg) ? ` - ${beat.msg}` : "");
+            return (
+                `${this.$root.datetime(beat.time)}` +
+                (beat.msg ? ` - ${beat.msg}` : "")
+            );
         },
-
     },
 };
 </script>
